@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+import re
+import sys
+import operator
+import csv
+import collections
+
+error = {}
+per_user = {}
+with open(sys.argv[1],"r") as logfile:
+    log = logfile.readlines()
+    for line in log:
+    
+	#creating a error dictionary
+        result = re.search(r"ticky: ERROR (.+) ", line)
+        if result is not None:
+            err_msg = result.group(1).rstrip()
+            if err_msg in error:
+                error[err_msg] = error[err_msg] + 1
+            else:
+                error[err_msg] = 1
+    
+	#creating error_message.csv file
+with open("error_message.csv", "w") as file1:
+    error_file = csv.writer(file1)
+    error_file.writerow(["ERROR", "COUNT"])
+    for error_line in sorted(error.items(), key=operator.itemgetter(1), reverse=True):
+        error_file.writerow(error_line)
+        
+        #creating per_user dictionary
+
+for line in log:
+    result2 = re.search(r"ticky: (ERROR|INFO) (.*) \((.*)\)", line.strip())
+    user_name = result2.group(3)
+    log_type = result2.group(1)
+    msg = result2.group(2)
+    
+    if user_name in per_user.keys():
+        if log_type in per_user[user_name].keys():
+            per_user[user_name][log_type] += 1
+        else:
+            per_user[user_name][log_type] = 1
+    
+    elif log_type == "INFO":
+        per_user[user_name] = {'USERNAME': user_name,"INFO": 1,"ERROR": 0}
+    else:
+        per_user[user_name] = {'USERNAME': user_name,"INFO": 0,"ERROR": 1}
+print(per_user)
+sorted_dic=collections.OrderedDict(sorted(per_user.items()))# sorted dictionary by keys
+	
+	#creating user_ststistics.csv file
+
+with open("user_statistics.csv","w") as user_file:
+    column_names = ["USERNAME","INFO","ERROR"]
+    row = csv.DictWriter(user_file,fieldnames=column_names)
+    row.writeheader()
+    for user_data in sorted_dic.values():
+        row.writerow(user_data)
+
